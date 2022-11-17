@@ -233,7 +233,6 @@ def atrous_conv(inputs, filters, kernel_size=3, padding="same", dilation_rates=[
                    )(inputs)
         f = layer_norm(f)
         f = Activation(activation)(f)
-        f = GlobalAveragePooling2D()(f)
         list_f.append(f)
         
     f = Conv2D(filters=filters, 
@@ -242,9 +241,10 @@ def atrous_conv(inputs, filters, kernel_size=3, padding="same", dilation_rates=[
                )(inputs)
     f = layer_norm(f)
     f = Activation(activation)(f)
-    f = GlobalAveragePooling2D()(f)
     list_f.append(f)
-        
+    
+    list_f = Concatenate()(list_f)
+    
     return list_f
 
 class PositionEmbedding(layers.Layer):

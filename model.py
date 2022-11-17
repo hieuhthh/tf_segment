@@ -3,8 +3,7 @@ from layers import *
 # !pip install -U git+https://github.com/leondgarse/keras_cv_attention_models -q
 from keras_cv_attention_models import efficientnet, convnext, swin_transformer_v2
 
-def create_model(im_size, n_labels, use_dim, max_frames,
-                 mlp_dim, num_heads, trans_layers, mha_dropout):
+def create_model(im_size, n_labels, use_dim):
     backbone = swin_transformer_v2.SwinTransformerV2Tiny_window16((im_size,im_size,3), 
                                                                   pretrained="imagenet",
                                                                   num_classes=0)
@@ -22,34 +21,33 @@ def create_model(im_size, n_labels, use_dim, max_frames,
 
     for backbone_layer in backbone_layers:
         astr = atrous_conv(backbone_layer, use_dim)
-        extract_layers += astr
+        astr = Dropout(0.1)(astr)
+        extract_layers.append(astr)
 
-    x = tf.stack(extract_layers, 1)
+    upsample_layers = []
 
-    pe = PositionEmbedding(input_shape=(max_frames, use_dim),
-                           input_dim=max_frames,
-                           output_dim=use_dim,
-                           mode=PositionEmbedding.MODE_ADD,
-    )
-
-    x = pe(x)
-
-    for i in range(trans_layers):
-        x = TransformerEncoder(use_dim, mlp_dim, num_heads)(x)
-
-    x = layers.GlobalAveragePooling1D()(x)
-    x = Dropout(mha_dropout)(x)
-
-    encoder_map = backbone_layers[0]
-    encoder_map = Conv2D(filters=use_dim, 
+    first_layer = extract_layers[0]
+    first_layer = Conv2D(filters=use_dim, 
                          kernel_size=3,  
                          padding="same",
-                         )(encoder_map)
-    encoder_map = layer_norm(encoder_map)
-    encoder_map = Activation("swish")(encoder_map)
+                         )(first_layer)
+    first_layer = layer_norm(first_layer)
+    first_layer = Activation("swish")(first_layer)
+    upsample_layers.append(first_layer)
 
-    x = Reshape((1, 1, -1))(x)
-    x = tf.math.multiply(encoder_map, x)
+    for idx, extract_layer in enumerate(extract_layers[1:]):
+        stride = 2**(idx+1)
+        ups = Conv2DTranspose(use_dim, 
+                              kernel_size=(3, 3), 
+                              strides=(stride, stride), padding="same")(extract_layer)
+        ups = layer_norm(ups)
+        ups = Activation("swish")(ups)
+        upsample_layers.append(ups)
+
+    x = wBiFPNAdd()(upsample_layers)
+    x = Dropout(0.3)(x)
+
+    x = self_attention(x, use_dim)
 
     x = Conv2D(filters=use_dim, 
                kernel_size=3,  
@@ -57,24 +55,27 @@ def create_model(im_size, n_labels, use_dim, max_frames,
                )(x)
     x = layer_norm(x)
     x = Activation("swish")(x)
+    x = Dropout(0.1)(x)
 
-    x = Conv2DTranspose(use_dim, kernel_size=(3, 3), strides=(4, 4), padding="same")(x)
+    x = Conv2DTranspose(use_dim // 2, kernel_size=(3, 3), strides=(4, 4), padding="same")(x)
     x = layer_norm(x)
     x = Activation("swish")(x)
-
-    x = Conv2D(filters=use_dim, 
+    x = Dropout(0.1)(x)
+                        
+    x = Conv2D(filters=use_dim // 2, 
                kernel_size=3,  
                padding="same",
                )(x)
     x = layer_norm(x)
     x = Activation("swish")(x)
-
+    x = Dropout(0.1)(x)
+    
     x = Conv2D(filters=n_labels, 
                kernel_size=3,  
                padding="same",
                )(x)
     x = Activation("sigmoid")(x)
-    
+
     model = Model(backbone.input, x)
     
     return model
@@ -93,8 +94,7 @@ if __name__ == "__main__":
 
     n_labels = 1
 
-    model = create_model(im_size, n_labels, use_dim, max_frames,
-                         mlp_dim, num_heads, trans_layers, mha_dropout)
+    model = create_model(im_size, n_labels, use_dim)
 
     model.summary()
 

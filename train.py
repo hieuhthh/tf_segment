@@ -64,8 +64,8 @@ tf.compat.v1.reset_default_graph()
 strategy = auto_select_accelerator()
 
 with strategy.scope():
-    model = create_model(im_size, n_labels, use_dim, max_frames,
-                         mlp_dim, num_heads, trans_layers, mha_dropout)
+    model = create_model(im_size, n_labels, use_dim)
+    
     model.summary()
 
     losses = bce_dice_loss
