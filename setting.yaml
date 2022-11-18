@@ -1,14 +1,15 @@
 route: ./
 seed: 42
-CUDA_VISIBLE_DEVICES: "0,1"
+CUDA_VISIBLE_DEVICES: "0,1,2"
 
 im_size: 352
 im_size_before_crop: ~ # ~ for not using this
-BATCH_SIZE: 16
+BATCH_SIZE: 4
 
 n_labels: 1
 
-use_dim: 128
+do_dim: 128
+final_dim: 256
 
 valid_ratio: 0.01
 test_ratio: ~
@@ -17,11 +18,13 @@ train_with_labels: True
 train_repeat: True
 train_shuffle: 512
 train_augment: False
+train_multi_scale_output: True
 
 valid_with_labels: True
 valid_repeat: False
 valid_shuffle: False
 valid_augment: False
+valid_multi_scale_output: True
 
 pretrained: ~
 

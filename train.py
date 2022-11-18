@@ -9,7 +9,7 @@ from glob import glob
 
 from dataset import *
 from utils import *
-from model import *
+from segment_model import *
 from losses import *
 from callbacks import *
 
@@ -46,11 +46,11 @@ for valid_data in os.listdir(valid_route):
 
 train_n_images = len(train_img_paths)
 train_dataset = build_dataset_from_X_Y(train_img_paths, train_mask_paths, train_with_labels, img_size,
-                                        BATCH_SIZE, train_repeat, train_shuffle, train_augment)
+                                       BATCH_SIZE, train_repeat, train_shuffle, train_augment, train_multi_scale_output)
 
 valid_n_images = len(valid_img_paths)
 valid_dataset = build_dataset_from_X_Y(valid_img_paths, valid_mask_paths, valid_with_labels, img_size,
-                                        BATCH_SIZE, valid_repeat, valid_shuffle, valid_augment)
+                                       BATCH_SIZE, valid_repeat, valid_shuffle, valid_augment, valid_multi_scale_output)
 
 n_labels = 1
 
@@ -64,7 +64,7 @@ tf.compat.v1.reset_default_graph()
 strategy = auto_select_accelerator()
 
 with strategy.scope():
-    model = create_model(im_size, n_labels, use_dim)
+    model = create_model(im_size, n_labels, config_map, do_dim, final_dim)
     
     model.summary()
 
@@ -97,14 +97,14 @@ his = model.fit(train_dataset,
 metric = 'loss'
 visual_save_metric(his, metric)
 
-metric = 'dice_coeff'
-visual_save_metric(his, metric)
+# metric = 'dice_coeff'
+# visual_save_metric(his, metric)
 
-metric = 'IoU'
-visual_save_metric(his, metric)
+# metric = 'IoU'
+# visual_save_metric(his, metric)
 
-metric = 'mean_absolute_error'
-visual_save_metric(his, metric)
+# metric = 'mean_absolute_error'
+# visual_save_metric(his, metric)
 
 # # EVALUATE
 
