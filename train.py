@@ -70,7 +70,9 @@ with strategy.scope():
 
     losses = bce_dice_loss
 
-    metrics = [dice_coeff, IoU, zero_IoU, tf.keras.metrics.MeanAbsoluteError()]
+    metrics = [dice_coeff, 
+               tf.keras.metrics.MeanIoU(num_classes=n_labels+1),
+               tf.keras.metrics.MeanAbsoluteError()]
 
     model.compile(optimizer=Adam(learning_rate=1e-3),
                   loss=losses,

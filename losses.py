@@ -33,6 +33,8 @@ def dice_coeff(y_true, y_pred):
     return dice_scores
 
 def IoU(y_true, y_pred, eps=1e-5):
+    y_true = tf.math.round(y_true)
+    y_pred = tf.math.round(y_pred)
     intersection = K.sum(y_true * y_pred, axis=[1,2,3])
     union = K.sum(y_true, axis=[1,2,3]) + K.sum(y_pred, axis=[1,2,3]) - intersection
     return K.mean( (intersection + eps) / (union + eps), axis=0)
@@ -49,23 +51,28 @@ def tversky(y_true, y_pred, smooth=1, alpha=0.7):
     return (true_pos + smooth) / (true_pos + alpha * false_neg + (1 - alpha) * false_pos + smooth)
 
 # tf.keras.metrics.MeanAbsoluteError
+# tf.keras.metrics.MeanIoU(num_classes)
 
 if __name__ == '__main__':
     import os
     from utils import *
-    from model import *
+    from segment_model import *
 
     os.environ["CUDA_VISIBLE_DEVICES"]=""
     
     settings = get_settings()
     globals().update(settings)
 
-    model = create_model(im_size, n_labels, use_dim, max_frames,
-                         mlp_dim, num_heads, trans_layers, mha_dropout)
+    n_labels = 1
+
+    model = create_model(im_size, n_labels, config_map, do_dim, final_dim)
 
     losses = bce_dice_loss
 
-    metrics = [dice_coeff, IoU, zero_IoU, tf.keras.metrics.MeanAbsoluteError()]
+    metrics = [dice_coeff, 
+               tf.keras.metrics.MeanIoU(num_classes=n_labels+1),
+               tf.keras.metrics.MeanAbsoluteError()]
+
 
     model.compile(optimizer=Adam(learning_rate=1e-3),
                   loss=losses,
