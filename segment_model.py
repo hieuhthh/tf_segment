@@ -92,8 +92,8 @@ config_map = {
 #         ups = Activation("swish")(ups)
 #         upsample_layers.append(ups)
 
-#     x = wBiFPNAdd()(upsample_layers)
-
+#     # x = wBiFPNAdd()(upsample_layers)
+#     x = Concatenate()(upsample_layers)
 #     x = self_attention(x, final_dim)
 
 #     x = Conv2D(filters=final_dim//2, 
@@ -163,7 +163,8 @@ def create_model(im_size, n_labels, config_map, do_dim, final_dim):
         ups = Activation("swish")(ups)
         upsample_layers.append(ups)
 
-    x = wBiFPNAdd()(upsample_layers)
+    # x = wBiFPNAdd()(upsample_layers)
+    x = Concatenate()(upsample_layers)
 
     x = self_attention(x, final_dim)
 

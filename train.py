@@ -37,12 +37,15 @@ valid_mask_paths = []
 
 valid_route = 'unzip/polyp/TestDataset'
 for valid_data in os.listdir(valid_route):
+    print('Load valid data:', valid_data)
     valid_path = path_join(valid_route, valid_data)
     valid_img_dir = path_join(valid_path, 'images')
     valid_mask_dir = path_join(valid_path, 'masks')
 
-    valid_img_paths += glob(valid_img_dir + '/*')
-    valid_mask_paths += glob(valid_mask_dir + '/*')
+    valid_img_paths += sorted(glob(valid_img_dir + '/*'))
+    valid_mask_paths += sorted(glob(valid_mask_dir + '/*'))
+
+    break
 
 train_n_images = len(train_img_paths)
 train_dataset = build_dataset_from_X_Y(train_img_paths, train_mask_paths, train_with_labels, img_size,
@@ -50,7 +53,7 @@ train_dataset = build_dataset_from_X_Y(train_img_paths, train_mask_paths, train_
 
 valid_n_images = len(valid_img_paths)
 valid_dataset = build_dataset_from_X_Y(valid_img_paths, valid_mask_paths, valid_with_labels, img_size,
-                                       BATCH_SIZE, valid_repeat, valid_shuffle, valid_augment, valid_multi_scale_output)
+                                       VALID_BATCH_SIZE, valid_repeat, valid_shuffle, valid_augment, valid_multi_scale_output)
 
 n_labels = 1
 
@@ -70,8 +73,9 @@ with strategy.scope():
 
     losses = bce_dice_loss
 
-    metrics = [dice_coeff, 
-               tf.keras.metrics.MeanIoU(num_classes=n_labels+1),
+    metrics = [dice_coeff,
+               round_dice_coeff, 
+               metric_iou,
                tf.keras.metrics.MeanAbsoluteError()]
 
     model.compile(optimizer=Adam(learning_rate=1e-3),

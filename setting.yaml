@@ -1,10 +1,11 @@
 route: ./
 seed: 42
-CUDA_VISIBLE_DEVICES: "0,1,2"
+CUDA_VISIBLE_DEVICES: "0,1,2,3"
 
 im_size: 352
 im_size_before_crop: ~ # ~ for not using this
-BATCH_SIZE: 4
+BATCH_SIZE: 8
+VALID_BATCH_SIZE: 8
 
 n_labels: 1
 
@@ -16,8 +17,8 @@ test_ratio: ~
 
 train_with_labels: True
 train_repeat: True
-train_shuffle: 512
-train_augment: False
+train_shuffle: 1024
+train_augment: True
 train_multi_scale_output: True
 
 valid_with_labels: True
@@ -31,8 +32,8 @@ pretrained: ~
 monitor: val_loss
 mode: min
 
-max_lr: 1.0e-3
+max_lr: 8.0e-4
 min_lr: 1.0e-5
-cycle_epoch: 40
-n_cycle: 10
+cycle_epoch: 20
+n_cycle: 1
 save_weights_only: True

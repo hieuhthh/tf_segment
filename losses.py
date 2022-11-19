@@ -32,15 +32,16 @@ def dice_coeff(y_true, y_pred):
     dice_scores = (2.0 * intersections + _epsilon) / (unions + _epsilon)
     return dice_scores
 
-def IoU(y_true, y_pred, eps=1e-5):
+def round_dice_coeff(y_true, y_pred):
+    # add epsilon to avoid a divide by 0 error in case a slice has no pixels set
+    # we only care about relative value, not absolute so this alteration doesn't matter
     y_true = tf.math.round(y_true)
     y_pred = tf.math.round(y_pred)
-    intersection = K.sum(y_true * y_pred, axis=[1,2,3])
-    union = K.sum(y_true, axis=[1,2,3]) + K.sum(y_pred, axis=[1,2,3]) - intersection
-    return K.mean( (intersection + eps) / (union + eps), axis=0)
-
-def zero_IoU(y_true, y_pred):
-    return IoU(1-y_true, 1-y_pred)
+    _epsilon = 10 ** -7
+    intersections = tf.reduce_sum(y_true * y_pred)
+    unions = tf.reduce_sum(y_true + y_pred)
+    dice_scores = (2.0 * intersections + _epsilon) / (unions + _epsilon)
+    return dice_scores
 
 def tversky(y_true, y_pred, smooth=1, alpha=0.7):
     y_true_pos = tf.reshape(y_true,[-1])
@@ -50,8 +51,16 @@ def tversky(y_true, y_pred, smooth=1, alpha=0.7):
     false_pos = tf.reduce_sum((1 - y_true_pos) * y_pred_pos)
     return (true_pos + smooth) / (true_pos + alpha * false_neg + (1 - alpha) * false_pos + smooth)
 
+def metric_iou(y_true, y_pred, threshold=0.5, epsilon=1e-5):
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.where(y_pred > threshold, x=1.0, y=0.0)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    union = K.sum(y_true_f + y_pred_f) - intersection
+    return intersection / (union + epsilon)
+
 # tf.keras.metrics.MeanAbsoluteError
-# tf.keras.metrics.MeanIoU(num_classes)
 
 if __name__ == '__main__':
     import os
@@ -69,8 +78,9 @@ if __name__ == '__main__':
 
     losses = bce_dice_loss
 
-    metrics = [dice_coeff, 
-               tf.keras.metrics.MeanIoU(num_classes=n_labels+1),
+    metrics = [dice_coeff,
+               round_dice_coeff, 
+               metric_iou,
                tf.keras.metrics.MeanAbsoluteError()]
 
 

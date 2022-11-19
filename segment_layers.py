@@ -12,9 +12,8 @@ DepthwiseConv2D, Multiply, Add, LayerNormalization, Conv2DTranspose
 from keras_cv_attention_models import efficientnet, convnext, swin_transformer_v2
 
 def layer_norm(inputs, zero_gamma=False, epsilon=1e-5):
-    norm_axis = -1 if K.image_data_format() == "channels_last" else 1
     gamma_initializer = tf.zeros_initializer() if zero_gamma else tf.ones_initializer()
-    return LayerNormalization(axis=norm_axis, epsilon=epsilon, gamma_initializer=gamma_initializer)(inputs)
+    return LayerNormalization(axis=-1, epsilon=epsilon, gamma_initializer=gamma_initializer)(inputs)
 
 class wBiFPNAdd(tf.keras.layers.Layer):
     def __init__(self, epsilon=1e-4, **kwargs):

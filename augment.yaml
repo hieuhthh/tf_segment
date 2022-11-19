@@ -1,0 +1,19 @@
+color_prob: 0.8
+hue: 0.01
+sature_lower: 0.9
+sature_upper: 1.1
+contrast_lower: 0.9
+contrast_upper: 1.1
+bri: 0.1
+jpg_quality_lower: ~
+jpg_quality_upper: ~
+
+crop_prob: 0.8
+crop_rate: 0.5
+
+rot_prob: 0.8
+rot_angle: 180 # degree from -deg to deg
+
+cutout_prob: 0.5
+cutout_n: 1
+cutout_size: 0.4
