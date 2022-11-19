@@ -116,7 +116,7 @@ if __name__ == '__main__':
 
     valid_n_images = len(valid_img_paths)
     valid_dataset = build_dataset_from_X_Y(valid_img_paths, valid_mask_paths, valid_with_labels, img_size,
-                                           BATCH_SIZE, valid_repeat, valid_shuffle, valid_augment, valid_multi_scale_output)
+                                           VALID_BATCH_SIZE, valid_repeat, valid_shuffle, valid_augment, valid_multi_scale_output)
 
     for x, y in train_dataset:
         break

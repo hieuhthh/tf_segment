@@ -1,8 +1,8 @@
 route: ./
 seed: 42
-CUDA_VISIBLE_DEVICES: "0,1,2,3"
+CUDA_VISIBLE_DEVICES: "0,1,2"
 
-im_size: 352
+im_size: 256
 im_size_before_crop: ~ # ~ for not using this
 BATCH_SIZE: 8
 VALID_BATCH_SIZE: 8
@@ -34,6 +34,6 @@ mode: min
 
 max_lr: 8.0e-4
 min_lr: 1.0e-5
-cycle_epoch: 20
-n_cycle: 1
+cycle_epoch: 50
+n_cycle: 2
 save_weights_only: True

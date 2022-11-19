@@ -65,7 +65,7 @@ def metric_iou(y_true, y_pred, threshold=0.5, epsilon=1e-5):
 if __name__ == '__main__':
     import os
     from utils import *
-    from segment_model import *
+    from tf_segment.model import *
 
     os.environ["CUDA_VISIBLE_DEVICES"]=""
     

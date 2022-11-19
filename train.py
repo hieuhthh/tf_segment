@@ -9,7 +9,7 @@ from glob import glob
 
 from dataset import *
 from utils import *
-from segment_model import *
+from model import *
 from losses import *
 from callbacks import *
 
@@ -44,8 +44,6 @@ for valid_data in os.listdir(valid_route):
 
     valid_img_paths += sorted(glob(valid_img_dir + '/*'))
     valid_mask_paths += sorted(glob(valid_mask_dir + '/*'))
-
-    break
 
 train_n_images = len(train_img_paths)
 train_dataset = build_dataset_from_X_Y(train_img_paths, train_mask_paths, train_with_labels, img_size,
