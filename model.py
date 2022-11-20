@@ -31,8 +31,8 @@ config_map = {
             'dilation_rates' : [4, 6]
         },
         'x16' : {
-            'kernel_sizes' : [1, 3],
-            'dilation_rates' : [2]
+            'kernel_sizes' : [3, 7],
+            'dilation_rates' : [2, 4]
         },
         'x32' : {
             'kernel_sizes' : [1, 3],
@@ -54,7 +54,7 @@ def create_model(im_size, n_labels, config_map, do_dim, final_dim):
             ]
 
     backbone_layers = [backbone.get_layer(layer_name).output for layer_name in backbone_layer_names]
-
+    
     extract_layers = []
 
     for idx, key in enumerate(list(config_map.keys())):
@@ -63,9 +63,37 @@ def create_model(im_size, n_labels, config_map, do_dim, final_dim):
         f = Dropout(0.2)(f)
         extract_layers.append(f)
 
+    before_outs = []
+    x = extract_layers[-1]
+    before_outs.append(x)
+    for i in range(len(extract_layers)-1, 0, -1):
+        ups = Conv2DTranspose(final_dim, 
+                              kernel_size=(2, 2), 
+                              strides=(2, 2), padding="same")(x)
+        ups = layer_norm(ups)
+        ups = Activation("swish")(ups)
+        ups = Dropout(0.2)(ups)
+
+        x = Concatenate()([extract_layers[i-1], ups])
+        x = Conv2D(filters=final_dim, 
+                   kernel_size=1,  
+                   padding="same",
+                   )(x)
+        x = layer_norm(x)
+        x = Activation("swish")(x)
+        x = Dropout(0.2)(x)
+
+        before_outs.append(x)
+
+    x = Conv2DTranspose(final_dim, 
+                        kernel_size=(2, 2), 
+                        strides=(2, 2), padding="same")(x)
+    x = layer_norm(x)
+    x = Activation("swish")(x)
+        
     temp_outputs = []
 
-    for out_i, extract_layer in enumerate(extract_layers):
+    for out_i, extract_layer in enumerate(before_outs[::-1]):
         temp_out = Conv2D(filters=n_labels, 
                           kernel_size=1,  
                           padding="same",
@@ -75,20 +103,21 @@ def create_model(im_size, n_labels, config_map, do_dim, final_dim):
         temp_outputs.append(temp_out)
 
     upsample_layers = []
-
+    upsample_layers.append(x)
+    
     for idx, extract_layer in enumerate(extract_layers):
         stride = 2**(idx+1)
         ups = Conv2DTranspose(final_dim, 
-                              kernel_size=(4, 4), 
+                              kernel_size=(2, 2), 
                               strides=(stride, stride), padding="same")(extract_layer)
         ups = layer_norm(ups)
         ups = Activation("swish")(ups)
         upsample_layers.append(ups)
-
+        
     x = Concatenate()(upsample_layers)
     x = Dropout(0.4)(x)
 
-    x = self_attention(x, final_dim)
+    x = self_attention_layer_norm(x, final_dim)
     x = Dropout(0.2)(x)
 
     x = Conv2D(filters=final_dim//2, 

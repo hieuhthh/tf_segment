@@ -47,11 +47,11 @@ for valid_data in os.listdir(valid_route):
 
 train_n_images = len(train_img_paths)
 train_dataset = build_dataset_from_X_Y(train_img_paths, train_mask_paths, train_with_labels, img_size,
-                                       BATCH_SIZE, train_repeat, train_shuffle, train_augment, train_multi_scale_output)
+                                        BATCH_SIZE, train_repeat, train_shuffle, train_augment, train_batch_augment, train_multi_scale_output)
 
 valid_n_images = len(valid_img_paths)
 valid_dataset = build_dataset_from_X_Y(valid_img_paths, valid_mask_paths, valid_with_labels, img_size,
-                                       VALID_BATCH_SIZE, valid_repeat, valid_shuffle, valid_augment, valid_multi_scale_output)
+                                        VALID_BATCH_SIZE, valid_repeat, valid_shuffle, valid_augment, valid_batch_augment, valid_multi_scale_output)
 
 n_labels = 1
 

@@ -19,12 +19,14 @@ train_with_labels: True
 train_repeat: True
 train_shuffle: 1024
 train_augment: True
+train_batch_augment: True
 train_multi_scale_output: True
 
 valid_with_labels: True
 valid_repeat: False
 valid_shuffle: False
 valid_augment: False
+valid_batch_augment: False
 valid_multi_scale_output: True
 
 pretrained: ~

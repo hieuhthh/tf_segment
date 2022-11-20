@@ -68,6 +68,23 @@ def self_attention(inputs, filters):
     x = x * norm_x
     return x
 
+def self_attention_layer_norm(inputs, filters):
+    x = Conv2D(filters=filters, 
+               kernel_size=1,  
+               padding="same",
+               )(inputs)
+    x = layer_norm(x)
+    norm_x = tf.math.l2_normalize(x)
+    x = tf.keras.activations.relu(x)
+    x = Conv2D(filters=filters, 
+               kernel_size=1,  
+               padding="same",
+               )(x)
+    x = layer_norm(x)
+    x = tf.keras.activations.softplus(x)
+    x = x * norm_x
+    return x
+
 def mkn_conv(inputs, filters, kernel_sizes=[1,3,5], padding="same", activation='swish'):
     # multi kernel size conv
     list_f = []

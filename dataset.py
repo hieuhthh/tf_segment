@@ -37,7 +37,7 @@ def do_multi_scale_image(img, target_size):
     return {'x1':img, 'x2':img_x2, 'x4':img_x4, 'x8':img_x8, 'x16':img_x16, 'x32':img_x32}
 
 def build_dataset(paths, labels=None, bsize=32,
-                  decode_fn=None, augment=None,
+                  decode_fn=None, augment=None, batch_augment_img=None,
                   repeat=False, shuffle=1024,
                   cache=False, cache_dir="", 
                   img_size=(256,256), multi_scale_output=False):
@@ -58,6 +58,11 @@ def build_dataset(paths, labels=None, bsize=32,
     dset = dset.shuffle(shuffle) if shuffle else dset
     dset = dset.map(decode_fn, num_parallel_calls=AUTO)
     dset = dset.map(augment, num_parallel_calls=AUTO) if augment is not None else dset
+    if batch_augment_img is not None:
+        dset = dset.batch(bsize)
+        dset = dset.map(batch_augment_img, num_parallel_calls=AUTO)
+        dset = dset.map(lambda x,y:(clip_image(x),clip_image(y)), num_parallel_calls=AUTO)
+        dset = dset.unbatch()
     dset = dset.map(lambda x,y:(x,do_multi_scale_image(y,img_size)), num_parallel_calls=AUTO) if multi_scale_output else dset
     dset = dset.batch(bsize)
     dset = dset.prefetch(AUTO)
@@ -65,13 +70,15 @@ def build_dataset(paths, labels=None, bsize=32,
     return dset
 
 def build_dataset_from_X_Y(X_path, Y_int, with_labels, img_size,
-                           batch_size, repeat, shuffle, augment, multi_scale_output):
+                           batch_size, repeat, shuffle, augment, batch_augment, multi_scale_output):
     decoder = build_decoder(with_labels, img_size)
 
     augment_img = build_augment() if augment else None
+    batch_augment_img = build_batch_augment() if batch_augment else None
 
     dataset = build_dataset(X_path, Y_int, bsize=batch_size, decode_fn=decoder,
-                            repeat=repeat, shuffle=shuffle, augment=augment_img, img_size=img_size, multi_scale_output=multi_scale_output)
+                            repeat=repeat, shuffle=shuffle, augment=augment_img, batch_augment_img=batch_augment_img,
+                            img_size=img_size, multi_scale_output=multi_scale_output)
 
     return dataset
 
@@ -112,11 +119,11 @@ if __name__ == '__main__':
 
     train_n_images = len(train_img_paths)
     train_dataset = build_dataset_from_X_Y(train_img_paths, train_mask_paths, train_with_labels, img_size,
-                                           BATCH_SIZE, train_repeat, train_shuffle, train_augment, train_multi_scale_output)
+                                           BATCH_SIZE, train_repeat, train_shuffle, train_augment, train_batch_augment, train_multi_scale_output)
 
     valid_n_images = len(valid_img_paths)
     valid_dataset = build_dataset_from_X_Y(valid_img_paths, valid_mask_paths, valid_with_labels, img_size,
-                                           VALID_BATCH_SIZE, valid_repeat, valid_shuffle, valid_augment, valid_multi_scale_output)
+                                           VALID_BATCH_SIZE, valid_repeat, valid_shuffle, valid_augment, valid_batch_augment, valid_multi_scale_output)
 
     for x, y in train_dataset:
         break
