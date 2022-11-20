@@ -58,8 +58,8 @@ with strategy.scope():
                       metrics=metrics)
 
 valid_route = 'unzip/polyp/TestDataset'
-# for valid_data in os.listdir(valid_route):
-for valid_data in ['Kvasir', 'CVC-ClinicDB']:
+for valid_data in os.listdir(valid_route):
+# for valid_data in ['Kvasir', 'CVC-ClinicDB']:
     valid_path = path_join(valid_route, valid_data)
     valid_img_dir = path_join(valid_path, 'images')
     valid_mask_dir = path_join(valid_path, 'masks')
