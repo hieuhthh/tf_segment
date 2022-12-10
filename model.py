@@ -17,136 +17,55 @@ from layers import *
 # 16    63
 # 18    71
 
-config_map = {
-        'x2' : {
-            'kernel_sizes' : [3, 7],
-            'dilation_rates' : [8, 16]
-        },
-        'x4' : {
-            'kernel_sizes' : [3, 7],
-            'dilation_rates' : [6, 8]
-        },
-        'x8' : {
-            'kernel_sizes' : [3, 7],
-            'dilation_rates' : [4, 6]
-        },
-        'x16' : {
-            'kernel_sizes' : [3, 7],
-            'dilation_rates' : [2, 4]
-        },
-        'x32' : {
-            'kernel_sizes' : [1, 3],
-            'dilation_rates' : [2]
-        },
-    }
-
-def create_model(im_size, n_labels, config_map, do_dim, final_dim):
-    backbone = efficientnet.EfficientNetV2S((im_size,im_size,3), 
-                                             pretrained="imagenet21k",
-                                             num_classes=0)
+def create_model(im_size, n_labels, do_dim, kernel_sizes, dilation_rates, drop_block):
+    backbone = swin_transformer_v2.SwinTransformerV2Tiny_window16((im_size,im_size,3), 
+                                                                   pretrained="imagenet",
+                                                                   num_classes=0)
 
     backbone_layer_names = [
-                'stack_0_block1_output',
-                'stack_1_block3_output',
-                'stack_2_block3_output',
-                'stack_4_block8_output',
-                'post_swish'
-            ]
+                    'stack1_block2_output',
+                    'stack2_block2_output',
+                    'stack3_block2_output',
+                    'stack4_block2_output'
+                ]
 
     backbone_layers = [backbone.get_layer(layer_name).output for layer_name in backbone_layer_names]
-    
+
     extract_layers = []
 
-    for idx, key in enumerate(list(config_map.keys())):
-        backbone_map = backbone_layers[idx]
-        f = mkn_atrous_block(backbone_map, do_dim, final_dim, config_map[key]['kernel_sizes'], config_map[key]['dilation_rates'])
-        f = Dropout(0.2)(f)
-        extract_layers.append(f)
-
-    before_outs = []
-    x = extract_layers[-1]
-    before_outs.append(x)
-    for i in range(len(extract_layers)-1, 0, -1):
-        ups = Conv2DTranspose(final_dim, 
-                              kernel_size=(2, 2), 
-                              strides=(2, 2), padding="same")(x)
-        ups = layer_norm(ups)
-        ups = Activation("swish")(ups)
-        ups = Dropout(0.2)(ups)
-
-        x = Concatenate()([extract_layers[i-1], ups])
-        x = Conv2D(filters=final_dim, 
-                   kernel_size=1,  
-                   padding="same",
-                   )(x)
-        x = layer_norm(x)
-        x = Activation("swish")(x)
-        x = Dropout(0.2)(x)
-
-        before_outs.append(x)
-
-    x = Conv2DTranspose(final_dim, 
-                        kernel_size=(2, 2), 
-                        strides=(2, 2), padding="same")(x)
-    x = layer_norm(x)
-    x = Activation("swish")(x)
-        
     temp_outputs = []
 
-    for out_i, extract_layer in enumerate(before_outs[::-1]):
+    for idx, backbone_layer in enumerate(backbone_layers):
+        x = mkn_atrous_block(backbone_layer, do_dim, kernel_sizes, dilation_rates, drop_block)
+        x = softmax_merge()(x)
+        x = self_attention(x, do_dim)
+        x = Dropout(drop_block)(x)
+
         temp_out = Conv2D(filters=n_labels, 
                           kernel_size=1,  
                           padding="same",
                           activation='sigmoid',
-                          name=f'output_x{2**(out_i+1)}'
-                          )(extract_layer)
+                          name=f'output_{idx+1}'
+                          )(x)
         temp_outputs.append(temp_out)
 
-    upsample_layers = []
-    upsample_layers.append(x)
-    
-    for idx, extract_layer in enumerate(extract_layers):
-        stride = 2**(idx+1)
-        ups = Conv2DTranspose(final_dim, 
-                              kernel_size=(2, 2), 
-                              strides=(stride, stride), padding="same")(extract_layer)
-        ups = layer_norm(ups)
-        ups = Activation("swish")(ups)
-        upsample_layers.append(ups)
-        
-    x = Concatenate()(upsample_layers)
-    x = Dropout(0.4)(x)
+        x = upsample(x, do_dim, scale=4*(2**idx))
+        extract_layers.append(x)
 
-    x = self_attention_layer_norm(x, final_dim)
-    x = Dropout(0.2)(x)
-
-    x = Conv2D(filters=final_dim//2, 
-               kernel_size=3,  
-               padding="same",
-               )(x)
-    x = layer_norm(x)
-    x = Activation("swish")(x)
-    x = Dropout(0.2)(x)
-
-    x = Conv2D(filters=final_dim//2, 
-               kernel_size=3,  
-               padding="same",
-               )(x)
-    x = layer_norm(x)
-    x = Activation("swish")(x)
-    x = Dropout(0.2)(x)
+    x = softmax_merge()(extract_layers)
+    x = self_attention(x, do_dim)
+    x = Dropout(drop_block)(x)
+    x = mlp(x, do_dim // 2, 'gelu', drop_block)
 
     x = Conv2D(filters=n_labels, 
                kernel_size=1,  
                padding="same",
                activation='sigmoid',
-               name=f'output_x1'
+               name=f'output_0'
                )(x)
 
-    temp_outputs.insert(0, x)
-
-    out_dict = {'x1':temp_outputs[0], 'x2':temp_outputs[1], 'x4':temp_outputs[2], 
-                'x8':temp_outputs[3], 'x16':temp_outputs[4], 'x32':temp_outputs[5]}
+    out_dict = {'x0':x, 'x1':temp_outputs[0], 'x2':temp_outputs[1], 
+                'x3':temp_outputs[2], 'x4':temp_outputs[3]}
 
     model = Model(backbone.input, out_dict)
     
@@ -166,7 +85,7 @@ if __name__ == "__main__":
 
     n_labels = 1
 
-    model = create_model(im_size, n_labels, config_map, do_dim, final_dim)
+    model = create_model(im_size, n_labels, do_dim, kernel_sizes, dilation_rates, drop_block)
 
     model.summary()
 

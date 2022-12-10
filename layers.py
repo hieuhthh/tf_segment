@@ -68,24 +68,7 @@ def self_attention(inputs, filters):
     x = x * norm_x
     return x
 
-def self_attention_layer_norm(inputs, filters):
-    x = Conv2D(filters=filters, 
-               kernel_size=1,  
-               padding="same",
-               )(inputs)
-    x = layer_norm(x)
-    norm_x = tf.math.l2_normalize(x)
-    x = tf.keras.activations.relu(x)
-    x = Conv2D(filters=filters, 
-               kernel_size=1,  
-               padding="same",
-               )(x)
-    x = layer_norm(x)
-    x = tf.keras.activations.softplus(x)
-    x = x * norm_x
-    return x
-
-def mkn_conv(inputs, filters, kernel_sizes=[1,3,5], padding="same", activation='swish'):
+def mkn_conv(inputs, filters, kernel_sizes=[1,3,5], padding="same", activation='swish', do_concat=False, dropout=0):
     # multi kernel size conv
     list_f = []
     for kernel_size in kernel_sizes:
@@ -93,13 +76,19 @@ def mkn_conv(inputs, filters, kernel_sizes=[1,3,5], padding="same", activation='
                    kernel_size=kernel_size,  
                    padding=padding, 
                    )(inputs)
-        f = layer_norm(f)
-        f = Activation(activation)(f)
+        f = bn_act(f)
+        
+        if dropout > 0:
+            f = Dropout(dropout)(f)
+            
         list_f.append(f)
-    list_f = Concatenate()(list_f)
+        
+    if do_concat:
+        list_f = Concatenate()(list_f)
+        
     return list_f
 
-def atrous_conv(inputs, filters, dilation_rates=[6,12,18], kernel_size=3, padding="same", activation='swish'):
+def atrous_conv(inputs, filters, dilation_rates=[6,12,18], kernel_size=3, padding="same", activation='swish', do_concat=False, dropout=0):
     list_f = []
     for rate in dilation_rates:
         f = Conv2D(filters=filters, 
@@ -107,19 +96,70 @@ def atrous_conv(inputs, filters, dilation_rates=[6,12,18], kernel_size=3, paddin
                    padding=padding, 
                    dilation_rate=rate
                    )(inputs)
-        f = layer_norm(f)
-        f = Activation(activation)(f)
+        f = bn_act(f)
+        
+        if dropout > 0:
+            f = Dropout(dropout)(f)
+            
         list_f.append(f)
     
-    list_f = Concatenate()(list_f)
+    if do_concat:
+        list_f = Concatenate()(list_f)
+        
     return list_f
 
-def mkn_atrous_block(inputs, do_dim, final_dim, kernel_sizes, dilation_rates):
-    mkn_list = mkn_conv(inputs, do_dim, kernel_sizes)
-    atrous_list = atrous_conv(inputs, do_dim, dilation_rates)
-    x = Concatenate()([mkn_list, atrous_list])
-    x = Conv2D(filters=final_dim, 
-               kernel_size=1,  
-               padding="same", 
-               )(x)
+def mkn_atrous_block(inputs, do_dim, kernel_sizes=None, dilation_rates=None, dropout=0, do_concat=False):
+    f = []
+    
+    if kernel_sizes is not None:
+        mkn_list = mkn_conv(inputs, do_dim, kernel_sizes, dropout=dropout)
+        f += mkn_list
+        
+    if dilation_rates is not None:
+        atrous_list = atrous_conv(inputs, do_dim, dilation_rates, dropout=dropout)
+        f += atrous_list
+        
+    if do_concat:
+        f = Concatenate()(f)
+        
+    return f
+
+class softmax_merge(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super(softmax_merge, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        num_in = len(input_shape)
+        self.w = self.add_weight(name=self.name,
+                                shape=(num_in,),
+                                initializer=tf.keras.initializers.constant(1 / num_in),
+                                trainable=True,
+                                dtype=tf.float32)
+
+    def call(self, inputs, **kwargs):
+        w = tf.keras.activations.softmax(tf.expand_dims(self.w, 0))[0]
+        x = tf.reduce_sum([w[i] * inputs[i] for i in range(len(inputs))], axis=0)
+        return x
+
+    def compute_output_shape(self, input_shape):
+        return input_shape[0]
+
+    def get_config(self):
+        config = super(softmax_merge, self).get_config()
+        return config
+    
+def upsample(inputs, filters, scale=2):
+    ups = Conv2DTranspose(filters, 
+                          kernel_size=(2, 2), 
+                          strides=(scale, scale), 
+                          padding="same")(inputs)
+    ups = bn_act(ups)
+    return ups
+
+def mlp(inputs, filters, activation='swish', dropout=0, n_do=2):
+    x = Dense(filters, "gelu")(inputs)
+    x = Dropout(dropout)(x)
+    for _ in range(n_do-1):
+        x = Dense(filters, "gelu")(x)
+        x = Dropout(dropout)(x)
     return x

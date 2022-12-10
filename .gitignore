@@ -1,3 +1,4 @@
 *.h5
 unzip
 download
+clean_model

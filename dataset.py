@@ -29,12 +29,12 @@ def build_decoder(with_labels=True, target_size=(256, 256)):
     return decode_with_labels if with_labels else decode_img
 
 def do_multi_scale_image(img, target_size):
-    img_x2 = tf.image.resize(img, (target_size[0]//2,target_size[1]//2))
+    # img_x2 = tf.image.resize(img, (target_size[0]//2,target_size[1]//2))
     img_x4 = tf.image.resize(img, (target_size[0]//4,target_size[1]//4))
     img_x8 = tf.image.resize(img, (target_size[0]//8,target_size[1]//8))
     img_x16 = tf.image.resize(img, (target_size[0]//16,target_size[1]//16))
     img_x32 = tf.image.resize(img, (target_size[0]//32,target_size[1]//32))
-    return {'x1':img, 'x2':img_x2, 'x4':img_x4, 'x8':img_x8, 'x16':img_x16, 'x32':img_x32}
+    return {'x0':img, 'x1':img_x4, 'x2':img_x8, 'x3':img_x16, 'x4':img_x32}
 
 def build_dataset(paths, labels=None, bsize=32,
                   decode_fn=None, augment=None, batch_augment_img=None,
@@ -58,11 +58,13 @@ def build_dataset(paths, labels=None, bsize=32,
     dset = dset.shuffle(shuffle) if shuffle else dset
     dset = dset.map(decode_fn, num_parallel_calls=AUTO)
     dset = dset.map(augment, num_parallel_calls=AUTO) if augment is not None else dset
+    
     if batch_augment_img is not None:
         dset = dset.batch(bsize)
         dset = dset.map(batch_augment_img, num_parallel_calls=AUTO)
-        dset = dset.map(lambda x,y:(clip_image(x),clip_image(y)), num_parallel_calls=AUTO)
         dset = dset.unbatch()
+        dset = dset.map(lambda x,y:(clip_image(x),clip_image(y)), num_parallel_calls=AUTO)
+
     dset = dset.map(lambda x,y:(x,do_multi_scale_image(y,img_size)), num_parallel_calls=AUTO) if multi_scale_output else dset
     dset = dset.batch(bsize)
     dset = dset.prefetch(AUTO)

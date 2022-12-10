@@ -52,8 +52,10 @@ def tversky(y_true, y_pred, smooth=1, alpha=0.7):
     return (true_pos + smooth) / (true_pos + alpha * false_neg + (1 - alpha) * false_pos + smooth)
 
 def metric_iou(y_true, y_pred, threshold=0.5, epsilon=1e-5):
-    y_true = tf.cast(y_true, tf.float32)
-    y_pred = tf.where(y_pred > threshold, x=1.0, y=0.0)
+    y_true = tf.math.round(y_true)
+    y_pred = tf.math.round(y_pred)
+    # y_true = tf.cast(y_true, tf.float32)
+    # y_pred = tf.where(y_pred > threshold, x=1.0, y=0.0)
     y_true_f = K.flatten(y_true)
     y_pred_f = K.flatten(y_pred)
     intersection = K.sum(y_true_f * y_pred_f)

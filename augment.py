@@ -72,16 +72,15 @@ def build_augment():
                 image = tf.image.random_jpeg_quality(image, aug_cfg['jpg_quality_lower'], aug_cfg['jpg_quality_upper'])
         
         # Random Crop
-        offset_x = tf.random.uniform([], 0, tf.cast(im_size * aug_cfg['crop_rate'], tf.int32), dtype=tf.int32)
-        img_size_crop = im_size - offset_x
-        if offset_x > 0:
-            offset_y = tf.random.uniform([], 0, offset_x, dtype=tf.int32)
-        else:
-            offset_y = tf.constant(0, dtype=tf.int32)
-
-        # Crop
         P = tf.cast(tf.random.uniform([], 0, 1) < aug_cfg['crop_prob'], tf.int32)
         if P == 1:
+            offset_x = tf.random.uniform([], 0, tf.cast(im_size * aug_cfg['crop_rate'], tf.int32), dtype=tf.int32)
+            img_size_crop = im_size - offset_x
+            if offset_x > 0:
+                offset_y = tf.random.uniform([], 0, offset_x, dtype=tf.int32)
+            else:
+                offset_y = tf.constant(0, dtype=tf.int32)
+                
             image = tf.slice(image, [offset_x, offset_y, 0], [img_size_crop, img_size_crop, 3])
             mask = tf.slice(mask, [offset_x, offset_y, 0], [img_size_crop, img_size_crop, 1])
             
@@ -98,7 +97,7 @@ def build_augment():
         # Cutout
         image, mask = cutout_seg(image, mask, im_size, aug_cfg['cutout_prob'], aug_cfg['cutout_n'], aug_cfg['cutout_size'])
 
-        # Resize
+        # Rescale
         image = clip_image(image)
         mask = clip_image(mask)
         

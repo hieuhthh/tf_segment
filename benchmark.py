@@ -14,12 +14,16 @@ from losses import *
 
 weight_model = 'best_model_segment_256_1.h5'
 
+save_route = 'clean_model'
+mkdir(save_route)
+
 new_model_save = f'clean_{weight_model}'
+save_path = path_join(save_route, new_model_save)
 
 settings = get_settings()
 globals().update(settings)
 
-os.environ["CUDA_VISIBLE_DEVICES"]="3"
+os.environ["CUDA_VISIBLE_DEVICES"]=""
 
 set_memory_growth()
 
@@ -34,7 +38,7 @@ print('n_labels', n_labels)
 strategy = auto_select_accelerator()
 
 with strategy.scope():
-    model = create_model(im_size, n_labels, config_map, do_dim, final_dim)
+    model = create_model(im_size, n_labels, do_dim, kernel_sizes, dilation_rates, drop_block)
     
     model.summary()
 
@@ -44,7 +48,7 @@ print('Loaded pretrain from', weight_model)
 with strategy.scope():
     new_model = Model(model.input, model.get_layer('output_x1').output)
     new_model.summary()
-    new_model.save(new_model_save)
+    new_model.save(save_path)
 
     losses = bce_dice_loss
 
@@ -58,8 +62,8 @@ with strategy.scope():
                       metrics=metrics)
 
 valid_route = 'unzip/polyp/TestDataset'
-for valid_data in os.listdir(valid_route):
-# for valid_data in ['Kvasir', 'CVC-ClinicDB']:
+# for valid_data in os.listdir(valid_route):
+for valid_data in ['Kvasir', 'CVC-ClinicDB']:
     valid_path = path_join(valid_route, valid_data)
     valid_img_dir = path_join(valid_path, 'images')
     valid_mask_dir = path_join(valid_path, 'masks')
@@ -69,7 +73,7 @@ for valid_data in os.listdir(valid_route):
 
     valid_n_images = len(valid_img_paths)
     valid_dataset = build_dataset_from_X_Y(valid_img_paths, valid_mask_paths, valid_with_labels, img_size,
-                                           1, valid_repeat, valid_shuffle, valid_augment, False)
+                                           1, valid_repeat, valid_shuffle, valid_augment, valid_batch_augment, False)
 
     print('*'*30)
     print(valid_data)
