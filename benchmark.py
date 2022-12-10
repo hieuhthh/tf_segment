@@ -12,7 +12,7 @@ from utils import *
 from model import *
 from losses import *
 
-weight_model = 'best_model_segment_256_1.h5'
+weight_model = 'best_model_segment_352_1.h5'
 
 save_route = 'clean_model'
 mkdir(save_route)
@@ -46,7 +46,7 @@ model.load_weights(weight_model)
 print('Loaded pretrain from', weight_model)
 
 with strategy.scope():
-    new_model = Model(model.input, model.get_layer('output_x1').output)
+    new_model = Model(model.input, model.get_layer('output_0').output)
     new_model.summary()
     new_model.save(save_path)
 

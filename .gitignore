@@ -1,4 +1,6 @@
+__pycache__
 *.h5
 unzip
 download
 clean_model
+good_one

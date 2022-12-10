@@ -148,12 +148,17 @@ class softmax_merge(tf.keras.layers.Layer):
         config = super(softmax_merge, self).get_config()
         return config
     
-def upsample(inputs, filters, scale=2):
+def upsample_convtrans(inputs, filters, scale=2):
     ups = Conv2DTranspose(filters, 
                           kernel_size=(2, 2), 
                           strides=(scale, scale), 
                           padding="same")(inputs)
     ups = bn_act(ups)
+    return ups
+
+def upsample_resize(inputs, scale=2):
+    ups = tf.image.resize(inputs, (int(inputs.shape[1]*scale), 
+                                   int(inputs.shape[2]*scale)))
     return ups
 
 def mlp(inputs, filters, activation='swish', dropout=0, n_do=2):

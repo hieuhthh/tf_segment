@@ -22,6 +22,8 @@ def create_model(im_size, n_labels, do_dim, kernel_sizes, dilation_rates, drop_b
                                                                    pretrained="imagenet",
                                                                    num_classes=0)
 
+
+
     backbone_layer_names = [
                     'stack1_block2_output',
                     'stack2_block2_output',
@@ -49,8 +51,14 @@ def create_model(im_size, n_labels, do_dim, kernel_sizes, dilation_rates, drop_b
                           )(x)
         temp_outputs.append(temp_out)
 
-        x = upsample(x, do_dim, scale=4*(2**idx))
+        x = upsample_resize(x, scale=4*(2**idx))
         extract_layers.append(x)
+
+    x = mkn_atrous_block(backbone.input, do_dim, kernel_sizes, dilation_rates, drop_block)
+    x = softmax_merge()(x)
+    x = self_attention(x, do_dim)
+    x = Dropout(drop_block)(x)
+    extract_layers.append(x)
 
     x = softmax_merge()(extract_layers)
     x = self_attention(x, do_dim)
