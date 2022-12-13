@@ -7,24 +7,27 @@ import tensorflow as tf
 
 from augment import *
 
-def build_decoder(with_labels=True, target_size=(256, 256)):
-    def decode_img_preprocess(img):
-        img = tf.image.resize(img, target_size)
+def build_decoder(with_labels=True, target_size=(256, 256), mask_size=None):
+    if mask_size is None:
+        mask_size = target_size
+
+    def decode_img_preprocess(img, sizes):
+        img = tf.image.resize(img, sizes)
         img = tf.cast(img, tf.float32) / 255.0
         return img
 
-    def decode_img(path, is_gray=False):
+    def decode_img(path, sizes=target_size, is_gray=False):
         """
         path to image
         """
         file_bytes = tf.io.read_file(path)
         img = tf.io.decode_image(file_bytes, channels=3, expand_animations=False)
         img = tf.image.rgb_to_grayscale(img) if is_gray else img
-        img = decode_img_preprocess(img)
+        img = decode_img_preprocess(img, sizes)
         return img
         
     def decode_with_labels(path_img, path_mask):
-        return decode_img(path_img, is_gray=False), decode_img(path_mask, is_gray=True)
+        return decode_img(path_img, sizes=target_size, is_gray=False), decode_img(path_mask, sizes=mask_size, is_gray=True)
         
     return decode_with_labels if with_labels else decode_img
 
@@ -34,7 +37,7 @@ def do_multi_scale_image(img, target_size):
     img_x8 = tf.image.resize(img, (target_size[0]//8,target_size[1]//8))
     img_x16 = tf.image.resize(img, (target_size[0]//16,target_size[1]//16))
     img_x32 = tf.image.resize(img, (target_size[0]//32,target_size[1]//32))
-    return {'x0':img, 'x1':img_x4, 'x2':img_x8, 'x3':img_x16, 'x4':img_x32}
+    return {'x1':img_x4, 'x2':img_x8, 'x3':img_x16, 'x4':img_x32}
 
 def build_dataset(paths, labels=None, bsize=32,
                   decode_fn=None, augment=None, batch_augment_img=None,
@@ -72,8 +75,8 @@ def build_dataset(paths, labels=None, bsize=32,
     return dset
 
 def build_dataset_from_X_Y(X_path, Y_int, with_labels, img_size,
-                           batch_size, repeat, shuffle, augment, batch_augment, multi_scale_output):
-    decoder = build_decoder(with_labels, img_size)
+                           batch_size, repeat, shuffle, augment, batch_augment, multi_scale_output, mask_size=None):
+    decoder = build_decoder(with_labels, img_size, mask_size)
 
     augment_img = build_augment() if augment else None
     batch_augment_img = build_batch_augment() if batch_augment else None
@@ -144,5 +147,6 @@ if __name__ == '__main__':
         print(y.keys())
         for idx, (key, value) in enumerate(y.items()):
             value = value[0][...,::-1] * 255
+            print(value.shape)
             cv2.imwrite(f"sample_dataset_masks_multi_scale_{key}.png", np.array(value))
 

@@ -36,7 +36,9 @@ valid_img_paths = []
 valid_mask_paths = []
 
 valid_route = 'unzip/polyp/TestDataset'
-for valid_data in os.listdir(valid_route):
+
+# for valid_data in os.listdir(valid_route):
+for valid_data in ['Kvasir']:
     print('Load valid data:', valid_data)
     valid_path = path_join(valid_route, valid_data)
     valid_img_dir = path_join(valid_path, 'images')

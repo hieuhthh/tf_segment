@@ -23,7 +23,7 @@ save_path = path_join(save_route, new_model_save)
 settings = get_settings()
 globals().update(settings)
 
-os.environ["CUDA_VISIBLE_DEVICES"]=""
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 
 set_memory_growth()
 
@@ -62,6 +62,9 @@ with strategy.scope():
                       metrics=metrics)
 
 valid_route = 'unzip/polyp/TestDataset'
+
+mask_size = (88, 88)
+
 # for valid_data in os.listdir(valid_route):
 for valid_data in ['Kvasir', 'CVC-ClinicDB']:
     valid_path = path_join(valid_route, valid_data)
@@ -73,7 +76,7 @@ for valid_data in ['Kvasir', 'CVC-ClinicDB']:
 
     valid_n_images = len(valid_img_paths)
     valid_dataset = build_dataset_from_X_Y(valid_img_paths, valid_mask_paths, valid_with_labels, img_size,
-                                           1, valid_repeat, valid_shuffle, valid_augment, valid_batch_augment, False)
+                                           1, valid_repeat, valid_shuffle, valid_augment, valid_batch_augment, False, mask_size)
 
     print('*'*30)
     print(valid_data)

@@ -157,6 +157,9 @@ def upsample_convtrans(inputs, filters, scale=2):
     return ups
 
 def upsample_resize(inputs, scale=2):
+    if scale == 1:
+        return inputs
+
     ups = tf.image.resize(inputs, (int(inputs.shape[1]*scale), 
                                    int(inputs.shape[2]*scale)))
     return ups

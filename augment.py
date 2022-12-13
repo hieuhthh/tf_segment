@@ -75,7 +75,10 @@ def build_augment():
         P = tf.cast(tf.random.uniform([], 0, 1) < aug_cfg['crop_prob'], tf.int32)
         if P == 1:
             offset_x = tf.random.uniform([], 0, tf.cast(im_size * aug_cfg['crop_rate'], tf.int32), dtype=tf.int32)
-            img_size_crop = im_size - offset_x
+
+            max_img_size_crop = im_size - offset_x
+            img_size_crop = tf.random.uniform([], tf.cast(tf.cast(max_img_size_crop, tf.float32) * (1.0 - aug_cfg['crop_rate']), tf.int32), max_img_size_crop, dtype=tf.int32)
+
             if offset_x > 0:
                 offset_y = tf.random.uniform([], 0, offset_x, dtype=tf.int32)
             else:

@@ -20,12 +20,12 @@ cutout_size: 0.2
 
 # batch augment
 
-mixup_prob: 0.2
+mixup_prob: 0.1
 
-cutmix_prob: 0.2
+cutmix_prob: 0.1
 
-mosaic_prob: 0.2
+mosaic_prob: 0.1
 mosaic_range: 0.2
 
-mosaic_full_prob: 0.2
+mosaic_full_prob: 0.1
 mosaic_full_range: 0.2
