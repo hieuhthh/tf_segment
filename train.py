@@ -103,8 +103,8 @@ his = model.fit(train_dataset,
 metric = 'loss'
 visual_save_metric(his, metric)
 
-# metric = 'dice_coeff'
-# visual_save_metric(his, metric)
+metric = 'output_0_round_dice_coeff'
+visual_save_metric(his, metric)
 
 # metric = 'IoU'
 # visual_save_metric(his, metric)

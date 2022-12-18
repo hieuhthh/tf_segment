@@ -63,7 +63,8 @@ with strategy.scope():
 
 valid_route = 'unzip/polyp/TestDataset'
 
-mask_size = (88, 88)
+val_im_size = 352
+mask_size = (val_im_size, val_im_size)
 
 # for valid_data in os.listdir(valid_route):
 for valid_data in ['Kvasir', 'CVC-ClinicDB']:

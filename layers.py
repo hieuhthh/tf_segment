@@ -148,13 +148,28 @@ class softmax_merge(tf.keras.layers.Layer):
         config = super(softmax_merge, self).get_config()
         return config
     
-def upsample_convtrans(inputs, filters, scale=2):
-    ups = Conv2DTranspose(filters, 
-                          kernel_size=(2, 2), 
-                          strides=(scale, scale), 
-                          padding="same")(inputs)
-    ups = bn_act(ups)
-    return ups
+def upsample_conv(inputs, scale=2, filters=None):
+    if scale == 1:
+        return inputs
+
+    if filters is None:
+        filters = inputs.shape[-1]
+
+    if scale > 1:
+        s = Conv2DTranspose(filters, 
+                            kernel_size=(2, 2), 
+                            strides=(scale, scale), 
+                            padding="same")(inputs)
+    else:
+        scale = int(1.0 / scale)
+        s = Conv2D(filters, 
+                   kernel_size=(2, 2), 
+                   strides=(scale, scale), 
+                   padding="same")(inputs)
+
+    s = bn_act(s)
+    
+    return s
 
 def upsample_resize(inputs, scale=2):
     if scale == 1:
@@ -164,10 +179,31 @@ def upsample_resize(inputs, scale=2):
                                    int(inputs.shape[2]*scale)))
     return ups
 
-def mlp(inputs, filters, activation='swish', dropout=0, n_do=2):
-    x = Dense(filters, "gelu")(inputs)
+def mlp(inputs, filters, activation='gelu', dropout=0, n_do=2):
+    x = Dense(filters, activation)(inputs)
     x = Dropout(dropout)(x)
     for _ in range(n_do-1):
-        x = Dense(filters, "gelu")(x)
+        x = Dense(filters, activation)(x)
         x = Dropout(dropout)(x)
     return x
+
+def concat_merge(inputs, filters):
+    """
+    inputs: [l1, l2, ...]
+    """
+    x = Concatenate()(inputs)
+    x = conv_bn_act(x, filters, 1)
+    return x
+
+def concat_self_attn(inputs, filters):
+    """
+    inputs: [l1, l2, ...]
+    """
+    x = Concatenate()(inputs)
+    x = self_attention(x, filters)
+    return x
+
+if __name__ == '__main__':
+    x = tf.ones((1, 128, 128, 32))
+    out = upsample_convtrans(x)
+    print(out.shape)

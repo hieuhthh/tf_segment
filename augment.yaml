@@ -1,4 +1,4 @@
-color_prob: 0.7
+color_prob: 0.5
 hue: 0.01
 sature_lower: 0.9
 sature_upper: 1.1
@@ -8,19 +8,19 @@ bri: 0.1
 jpg_quality_lower: ~
 jpg_quality_upper: ~
 
-crop_prob: 0.7
+crop_prob: 0.5
 crop_rate: 0.3
 
-rot_prob: 0.7
+rot_prob: 0.5
 rot_angle: 10 # degree from -deg to deg
 
-cutout_prob: 0.2
+cutout_prob: 0.1
 cutout_n: 1
 cutout_size: 0.2
 
 # batch augment
 
-mixup_prob: 0.1
+mixup_prob: 0.0
 
 cutmix_prob: 0.1
 

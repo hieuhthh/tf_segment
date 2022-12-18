@@ -37,7 +37,7 @@ def do_multi_scale_image(img, target_size):
     img_x8 = tf.image.resize(img, (target_size[0]//8,target_size[1]//8))
     img_x16 = tf.image.resize(img, (target_size[0]//16,target_size[1]//16))
     img_x32 = tf.image.resize(img, (target_size[0]//32,target_size[1]//32))
-    return {'x1':img_x4, 'x2':img_x8, 'x3':img_x16, 'x4':img_x32}
+    return {'x1':img, 'x2':img_x4, 'x3':img_x8, 'x4':img_x16, 'x5':img_x32}
 
 def build_dataset(paths, labels=None, bsize=32,
                   decode_fn=None, augment=None, batch_augment_img=None,
