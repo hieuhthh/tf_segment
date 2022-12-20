@@ -67,7 +67,7 @@ tf.compat.v1.reset_default_graph()
 strategy = auto_select_accelerator()
 
 with strategy.scope():
-    model = create_model(im_size, n_labels, do_dim, kernel_sizes, dilation_rates, drop_block)
+    model = create_model(im_size, n_labels, final_dim, drop_block)
     
     model.summary()
 

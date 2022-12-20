@@ -23,7 +23,7 @@ save_path = path_join(save_route, new_model_save)
 settings = get_settings()
 globals().update(settings)
 
-os.environ["CUDA_VISIBLE_DEVICES"]="3"
+os.environ["CUDA_VISIBLE_DEVICES"]=""
 
 set_memory_growth()
 

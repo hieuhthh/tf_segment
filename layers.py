@@ -11,7 +11,7 @@ DepthwiseConv2D, Multiply, Add, LayerNormalization, Conv2DTranspose
 
 from keras_cv_attention_models import efficientnet, convnext, swin_transformer_v2
 
-def layer_norm(inputs, zero_gamma=False, epsilon=1e-5):
+def layer_norm(inputs, zero_gamma=False, epsilon=1e-6):
     gamma_initializer = tf.zeros_initializer() if zero_gamma else tf.ones_initializer()
     return LayerNormalization(axis=-1, epsilon=epsilon, gamma_initializer=gamma_initializer)(inputs)
 
@@ -60,11 +60,12 @@ def conv_bn_act(inputs, filters, kernel_size, strides=(1, 1), padding='same', ac
     return x
 
 def self_attention(inputs, filters):
-    x = conv_bn_act(inputs, filters, 1, activation=None)
+    x = Conv2D(filters, kernel_size=1, strides=(1,1), padding='same', use_bias=False)(inputs)
+    x = BatchNormalization()(x)
     norm_x = tf.math.l2_normalize(x)
     x = tf.keras.activations.relu(x)
-    x = conv_bn_act(x, filters, 1, activation=None)
-    x = tf.keras.activations.softplus(x)
+    x = Conv2D(filters, kernel_size=1, strides=(1,1), padding='same')(x)
+    x = tf.keras.activations.softplus(x) 
     x = x * norm_x
     return x
 
@@ -179,6 +180,15 @@ def upsample_resize(inputs, scale=2):
                                    int(inputs.shape[2]*scale)))
     return ups
 
+def upsample_new(inputs, scale=2):
+    if scale == 1:
+        return inputs
+
+    up_res = upsample_resize(inputs, scale)
+    up_conv = upsample_conv(inputs, scale)
+
+    return up_res + up_conv
+
 def mlp(inputs, filters, activation='gelu', dropout=0, n_do=2):
     x = Dense(filters, activation)(inputs)
     x = Dropout(dropout)(x)
@@ -203,7 +213,47 @@ def concat_self_attn(inputs, filters):
     x = self_attention(x, filters)
     return x
 
-if __name__ == '__main__':
-    x = tf.ones((1, 128, 128, 32))
-    out = upsample_convtrans(x)
-    print(out.shape)
+class ChannelAffine(keras.layers.Layer):
+    def __init__(self, use_bias=True, weight_init_value=1, axis=-1, **kwargs):
+        super(ChannelAffine, self).__init__(**kwargs)
+        self.use_bias, self.weight_init_value, self.axis = use_bias, weight_init_value, axis
+        self.ww_init = keras.initializers.Constant(weight_init_value) if weight_init_value != 1 else "ones"
+        self.bb_init = "zeros"
+        self.supports_masking = False
+
+    def build(self, input_shape):
+        if self.axis == -1 or self.axis == len(input_shape) - 1:
+            ww_shape = (input_shape[-1],)
+        else:
+            ww_shape = [1] * len(input_shape)
+            axis = self.axis if isinstance(self.axis, (list, tuple)) else [self.axis]
+            for ii in axis:
+                ww_shape[ii] = input_shape[ii]
+            ww_shape = ww_shape[1:]  # Exclude batch dimension
+
+        self.ww = self.add_weight(name="weight", shape=ww_shape, initializer=self.ww_init, trainable=True)
+        if self.use_bias:
+            self.bb = self.add_weight(name="bias", shape=ww_shape, initializer=self.bb_init, trainable=True)
+        super(ChannelAffine, self).build(input_shape)
+
+    def call(self, inputs, **kwargs):
+        return inputs * self.ww + self.bb if self.use_bias else inputs * self.ww
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+    def get_config(self):
+        config = super(ChannelAffine, self).get_config()
+        config.update({"use_bias": self.use_bias, "weight_init_value": self.weight_init_value, "axis": self.axis})
+        return config
+
+def convnext_block(inputs, filters, layer_scale_init_value=1e-6, drop_rate=0, activation="gelu"):
+    x = DepthwiseConv2D(kernel_size=7, padding="SAME", use_bias=True)(inputs)
+    x = layer_norm(x)
+    x = Dense(4 * filters)(x)
+    x = Activation(activation=activation)(x)
+    x = Dense(filters)(x)
+    if layer_scale_init_value > 0:
+        x = ChannelAffine(use_bias=False, weight_init_value=layer_scale_init_value)(x)
+    x = Dropout(drop_rate)(x)
+    return Add()([inputs, x])

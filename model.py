@@ -17,9 +17,7 @@ from layers import *
 # 16    63
 # 18    71
 
-def create_model(im_size, n_labels, do_dim, kernel_sizes, dilation_rates, drop_block):
-    func_up_sample = upsample_conv
-
+def create_model(im_size, n_labels, final_dim, drop_block=0):
     backbone = swin_transformer_v2.SwinTransformerV2Tiny_window16((im_size,im_size,3), 
                                                                    pretrained="imagenet",
                                                                    num_classes=0)
@@ -33,33 +31,42 @@ def create_model(im_size, n_labels, do_dim, kernel_sizes, dilation_rates, drop_b
 
     backbone_layers = [backbone.get_layer(layer_name).output for layer_name in backbone_layer_names]
 
+    modify_backbone = []
+
+    for lay in backbone_layers:
+        x = convnext_block(lay, lay.shape[-1], drop_rate=drop_block)
+        modify_backbone.append(x)
+
     mixed_layers = []
 
-    for i in range(len(backbone_layers)):
-        temp_mix = [backbone_layers[i]]
+    mix_inputs = modify_backbone
 
-        for j in range(len(backbone_layers)):
+    for i in range(len(mix_inputs)):
+        temp_mix = [mix_inputs[i]]
+
+        for j in range(len(mix_inputs)):
             if i == j:
                 continue
             scale = 2 ** (j - i)
-            temp_up = func_up_sample(backbone_layers[j], scale)
+            temp_up = upsample_resize(mix_inputs[j], scale)
 
             temp_mix.append(temp_up)
 
-        x = concat_self_attn(temp_mix, do_dim)
+        x = concat_self_attn(temp_mix, mix_inputs[i].shape[-1])
 
         mixed_layers.append(x)
+
+    modify_mixs = []
+
+    for lay in mixed_layers:
+        x = convnext_block(lay, lay.shape[-1])
+        modify_mixs.append(x)
 
     extract_layers = []
 
     temp_outputs = []
 
-    for idx, backbone_layer in enumerate(mixed_layers):
-        x = mkn_atrous_block(backbone_layer, do_dim, kernel_sizes, dilation_rates, drop_block)
-        x = concat_self_attn(x, do_dim)
-        x = x + backbone_layer
-        x = Dropout(drop_block)(x)
-
+    for idx, x in enumerate(modify_mixs):
         temp_out = Conv2D(filters=n_labels, 
                           kernel_size=1,  
                           padding="same",
@@ -68,13 +75,11 @@ def create_model(im_size, n_labels, do_dim, kernel_sizes, dilation_rates, drop_b
                           )(x)
         temp_outputs.append(temp_out)
 
-        x = func_up_sample(x, scale=2**(idx+2))
+        x = upsample_resize(x, scale=2**(idx + 2))
         extract_layers.append(x)
 
-    x_merge = concat_self_attn(extract_layers, do_dim)
-    x = mkn_atrous_block(x_merge, do_dim, kernel_sizes, dilation_rates, drop_block)
-    x = concat_self_attn(x, do_dim)
-    x = x + x_merge
+    x = concat_self_attn(extract_layers, final_dim)
+    x = convnext_block(x, final_dim)
 
     x = Conv2D(filters=n_labels, 
                kernel_size=1,  
@@ -104,7 +109,7 @@ if __name__ == "__main__":
 
     n_labels = 1
 
-    model = create_model(im_size, n_labels, do_dim, kernel_sizes, dilation_rates, drop_block)
+    model = create_model(im_size, n_labels, final_dim, drop_block)
 
     model.summary()
 
