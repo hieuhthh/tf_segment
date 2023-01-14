@@ -1,15 +1,15 @@
 route: ./
 seed: 42
-CUDA_VISIBLE_DEVICES: "0"
+CUDA_VISIBLE_DEVICES: "0,1,2,3"
 
 im_size: 352
-BATCH_SIZE: 4
-VALID_BATCH_SIZE: 4
+BATCH_SIZE: 8
+VALID_BATCH_SIZE: 8
 
 n_labels: 1
 
-final_dim: 768
-drop_block: 0.0
+final_dim: 128
+drop_block: 0.1
 
 valid_ratio: ~
 test_ratio: ~
@@ -36,5 +36,5 @@ mode: min
 max_lr: 1.0e-3
 min_lr: 1.0e-5
 cycle_epoch: 100
-n_cycle: 5
+n_cycle: 10
 save_weights_only: True

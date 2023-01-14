@@ -1,10 +1,10 @@
 color_prob: 0.5
-hue: 0.01
-sature_lower: 0.9
-sature_upper: 1.1
-contrast_lower: 0.9
-contrast_upper: 1.1
-bri: 0.1
+# hue: 0.0
+# sature_lower: 1.0
+# sature_upper: 1.0
+# contrast_lower: 1.0
+# contrast_upper: 1.0
+bri: 0.01
 jpg_quality_lower: ~
 jpg_quality_upper: ~
 
@@ -14,7 +14,7 @@ crop_rate: 0.3
 rot_prob: 0.5
 rot_angle: 10 # degree from -deg to deg
 
-cutout_prob: 0.1
+cutout_prob: 0.0
 cutout_n: 1
 cutout_size: 0.2
 
@@ -22,10 +22,10 @@ cutout_size: 0.2
 
 mixup_prob: 0.0
 
-cutmix_prob: 0.1
+cutmix_prob: 0.2
 
-mosaic_prob: 0.1
+mosaic_prob: 0.0
 mosaic_range: 0.2
 
-mosaic_full_prob: 0.1
+mosaic_full_prob: 0.0
 mosaic_full_range: 0.2

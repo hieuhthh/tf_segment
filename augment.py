@@ -63,9 +63,9 @@ def build_augment():
         # Color
         P = tf.cast(tf.random.uniform([], 0, 1) < aug_cfg['color_prob'], tf.int32)
         if P == 1:
-            image = tf.image.random_hue(image, aug_cfg['hue'])
-            image = tf.image.random_saturation(image, aug_cfg['sature_lower'], aug_cfg['sature_upper'])
-            image = tf.image.random_contrast(image, aug_cfg['contrast_lower'], aug_cfg['contrast_upper'])
+            # image = tf.image.random_hue(image, aug_cfg['hue'])
+            # image = tf.image.random_saturation(image, aug_cfg['sature_lower'], aug_cfg['sature_upper'])
+            # image = tf.image.random_contrast(image, aug_cfg['contrast_lower'], aug_cfg['contrast_upper'])
             image = tf.image.random_brightness(image, aug_cfg['bri'])
 
             if aug_cfg['jpg_quality_lower'] is not None and aug_cfg['jpg_quality_upper'] is not None:
